@@ -7,6 +7,14 @@
     "start": "node redditSource.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC"
+  "author": "Pablo Estrada",
+  "type": "module",
+  "license": "ISC",
+  "dependencies": {
+    "lru_map": "^0.4.1",
+    "lru-cache": "^6.0.0",
+    "node-cron": "^3.0.0",
+    "node-fetch": "^2.6.1",
+    "ordered-dict": "^0.0.1"
+  }
 }
