@@ -5,7 +5,7 @@ class RedditCache {
 
     constructor(subreddits) {
         this.allCaches = Object.assign({}, ...subreddits.map(
-            (subreddit) => ({[subreddit]: { comments: new OrderedDict(), posts: new OrderedDict() } }))
+            (subreddit) => ({[subreddit]: { comment: new OrderedDict(), post: new OrderedDict() } }))
         );
     }
 
@@ -17,10 +17,11 @@ class RedditCache {
         }
     }
 
-    addMany = (ids, subreddit, type) => {
+    filterAndAdd = (data, subreddit, type) => {
         const currentCache = this.allCaches[subreddit][type]
-        const filteredIds = ids.filter(id => !currentCache.has(id))
-        filteredIds.forEach(id => this.add(id, subreddit, type))
+        const filteredStreamData = data.filter(dataPoint => !currentCache.has(dataPoint.id))
+        filteredStreamData.forEach(dataPoint => this.add(dataPoint.id, subreddit, type))
+        return { filteredStreamData, cacheSize: currentCache.size()}
     }
 }
 
