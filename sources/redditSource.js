@@ -63,23 +63,42 @@ class RedditSource {
         }))
     }
 
-    performSchedulerParameterTuning = async () => {
-        const { subreddits, processStream } = this
+    getDataRatesPerMinute = async () => {
+        const { subreddits } = this
+        const subredditDataCounts = await this.getSubredditDataCounts(subreddits);
+
+        const { numberOfEntriesBySubreddit, postScheduleRule, commentScheduleRule } = subredditDataCounts
+        const ratePerMinute = {}
+        Object.keys(numberOfEntriesBySubreddit).forEach((subreddit) => {
+            ratePerMinute[subreddit] =
+            {
+                post: numberOfEntriesBySubreddit[subreddit].post / postScheduleRule,
+                comment: numberOfEntriesBySubreddit[subreddit].comment / commentScheduleRule
+            }
+        });
+        console.log(`* parameter tuning - rate per minute ${JSON.stringify(ratePerMinute)}`)
+        return ratePerMinute
+    }
+
+    getSubredditDataCounts = async (subreddits) => {
+        const { processStream } = this
         const numberOfSubreddits = subreddits.length
-        const tuningResults = await new Promise(function(resolve, reject) {
+        return new Promise(function(resolve, reject) {
             // TODO: refactor to concurrent dictionary
             const SECONDS_IN_MINUTE = 60
             const numberOfEntriesBySubreddit = Object.assign({}, ...subreddits.map((subreddit) => ({[subreddit]: {post: 0, postRequests: 0, comment: 0, commentRequests: 0} })));
             const overflowSafetyPercentage = 0.05
             const maxRequestsPerSubreddit = RedditSource.MAX_REQUEST_PER_MINUTE / numberOfSubreddits
 
+            // TODO: Abstract
             const postRequestsPercentage = 0.25 - overflowSafetyPercentage
             const postScheduleRule = Math.ceil(SECONDS_IN_MINUTE / (maxRequestsPerSubreddit * postRequestsPercentage)) 
 
             const commentsRequestsPercentage = 0.75 - overflowSafetyPercentage
             const commentScheduleRule = Math.ceil(SECONDS_IN_MINUTE / (maxRequestsPerSubreddit * commentsRequestsPercentage)) 
 
-            console.log(`* Starting schedule parameter tuning with params { posts: ${postScheduleRule}/s, comments: ${commentScheduleRule}/s }`)
+            // TODO: Abstract
+            console.log(`* parameter tuning - starting schedule parameter tuning with params { posts: ${postScheduleRule}/s, comments: ${commentScheduleRule}/s }`)
             const tuningPostsJob = schedule.scheduleJob({rule: `*/${postScheduleRule} * * * * *`}, async () => {
                 subreddits.forEach(async (subredditName) => {
                     numberOfEntriesBySubreddit[subredditName]['post'] += await processStream(subredditName, 'post')
@@ -99,14 +118,13 @@ class RedditSource {
 
             }, RedditSource.TUNING_TIME_IN_MINS * SECONDS_IN_MINUTE * 1000);
         });
-
-        console.log('Number of entries by subreddit ~ 1 minute')
-        console.log(tuningResults)
     }
 
     start = async () => {
         await this.preloadCaches();
-        await this.performSchedulerParameterTuning();
+
+        const ratePerMinuteBySubreddit = await this.getDataRatesPerMinute();
+
 
         // const job = schedule.scheduleJob({rule: '*/1 * * * * *'}, function(){
         //     console.log('Time for tea!');
