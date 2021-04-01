@@ -1,5 +1,7 @@
 import fetch from 'node-fetch';
 
+
+
 class RedditApi {
     static MAX_REDDIT_LIMIT = 100
     static baseUrl = 'https://www.reddit.com/r/'

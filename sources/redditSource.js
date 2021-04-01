@@ -1,9 +1,7 @@
 import cron from 'node-cron'
-import OrderedDict from 'ordered-dict'
 import RedditApi from './redditApi.js';
 
 class RedditSource {
-    static CACHE_SIZE = 301
 
     constructor() {
         this.postCache = new OrderedDict();
