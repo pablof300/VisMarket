@@ -2,8 +2,11 @@ import schedule from 'node-schedule'
 import RedditApi from './redditApi.js';
 import RedditCache from './redditCache.js';
 
+// TODO: create redditStream to handle getting streams
+// this would be the reddit source
+
 class RedditSource {
-    static TUNING_TIME_IN_MINS = 1
+    static TUNING_TIME_IN_MINS = 5
     // TODO: Refactor to RedditApi
     static MAX_REQUEST_PER_MINUTE = 60
     static SECONDS_IN_MINUTE = 60
@@ -44,21 +47,22 @@ class RedditSource {
         const ratePerMinuteBySubreddit = await this.getDataRatesPerMinute();
 
         const requestsPerMinuteBySubreddit = {}
+        
+        console.log(ratePerMinuteBySubreddit)
+
         Object.keys(ratePerMinuteBySubreddit).forEach(subreddit => {
             requestsPerMinuteBySubreddit[subreddit] = {
-                post: Math.max(1, Math.ceil(ratePerMinuteBySubreddit[subreddit].post * (1 + overflowProtectionPercentage) / RedditSource.MAX_REQUEST_PER_MINUTE)),
-                comment: Math.max(1, Math.ceil(ratePerMinuteBySubreddit[subreddit].comment * (1 + overflowProtectionPercentage) / RedditSource.MAX_REQUEST_PER_MINUTE))
+                post: Math.max(1, Math.ceil(ratePerMinuteBySubreddit[subreddit].post * (1 + overflowProtectionPercentage) / RedditApi.MAX_REDDIT_LIMIT)),
+                comment: Math.max(1, Math.ceil(ratePerMinuteBySubreddit[subreddit].comment * (1 + overflowProtectionPercentage) / RedditApi.MAX_REDDIT_LIMIT))
             }
         })
-        console.log(ratePerMinuteBySubreddit)
-        
-        const totalRequestsPerMinute = Object.values(requestsPerMinuteBySubreddit).reduce((accumulator, subredditRates) => accumulator + subredditRates.post + subredditRates.comment, 0)
-        const postFrequency = Math.floor(RedditSource.SECONDS_IN_MINUTE / Math.max(...Object.values(requestsPerMinuteBySubreddit).map(subredditRates => subredditRates.post)))
-        const commentFrequency = Math.floor(RedditSource.SECONDS_IN_MINUTE / Math.max(...Object.values(requestsPerMinuteBySubreddit).map(subredditRates => subredditRates.comment)))
 
-        console.log(totalRequestsPerMinute)
-        console.log(postFrequency)
-        console.log(commentFrequency)
+        const totalRequestsPerMinute = Object.values(requestsPerMinuteBySubreddit).reduce((accumulator, subredditRates) => accumulator + subredditRates.post + subredditRates.comment, 0)
+        const postFrequency = Math.floor(RedditSource.SECONDS_IN_MINUTE / Object.values(requestsPerMinuteBySubreddit).reduce((total, subredditRates) => total + subredditRates.post, 0))
+        const commentFrequency = Math.floor(RedditSource.SECONDS_IN_MINUTE / Object.values(requestsPerMinuteBySubreddit).reduce((total, subredditRates) => total + subredditRates.comment, 0))
+
+        console.log(`* Parameter recommendations based off ${totalRequestsPerMinute} total requests and ${JSON.stringify(requestsPerMinuteBySubreddit)}`)
+        console.log(`* Streamer parameter recommendations: (post frequency ~ ${postFrequency}/s) (comment frequency ~ ${commentFrequency})`)
 
         return { requestsPerMinuteBySubreddit, postFrequency, commentFrequency }
     }
@@ -124,49 +128,10 @@ class RedditSource {
     }
 
     start = async () => {
-        // const overflowProtectionPercentage = 0.25
-        // const ratePerMinuteBySubreddit = await this.getDataRatesPerMinute();
-
-        // const requestsPerMinuteBySubreddit = {}
-        // Object.keys(ratePerMinuteBySubreddit).forEach(subreddit => {
-        //     requestsPerMinuteBySubreddit[subreddit] = {
-        //         post: ratePerMinuteBySubreddit[subreddit].post * (1 + overflowProtectionPercentage) / RedditSource.MAX_REQUEST_PER_MINUTE,
-        //         comment: ratePerMinuteBySubreddit[subreddit].comment * (1 + overflowProtectionPercentage) / RedditSource.MAX_REQUEST_PER_MINUTE
-        //     }
-        // })
-        // await this.getRecommendedRequestsPerMinute()
-        // console.log("Pickle")
-        // console.log(requestsPerMinuteBySubreddit)
-
-        // const postRequestsPerMinute = Math.ceil(Math.max(
-        //     ...Object.values(ratePerMinuteBySubreddit).map(rates => rates.post)) * (1 + overflowProtectionPercentage) / RedditApi.MAX_REQUEST_PER_MINUTE)
-        // const commentRequestsPerMinute = Math.ceil(Math.max(
-        //     ...Object.values(ratePerMinuteBySubreddit).map(rates => rates.comment)) * (1 + overflowProtectionPercentage) / RedditApi.MAX_REQUEST_PER_MINUTE)
-        
-
-        const job = schedule.scheduleJob({rule: '*/60 * * * * *'}, function(){
-            console.log('Time for tea!');
-        });
+        const streamerParameters = await this.getRecommendedRequestsPerMinute()
 
         // schedule.scheduleJob({rule: '*/1 * * * * *' }, function(){
         //     console.log('Time for other tea!');
-        // });
-        // const subredditName = 'wallstreetbets'
-        // cron.schedule('*/60 * * * * *', async () => {
-        //     this.processNewPosts(subredditName, RedditSource.MAX_REDDIT_LIMIT).then(newPosts => {
-        //         console.log(`Cache size: ${this.postCache.size()}`)
-        //         console.log(`RedditStream: ${subredditName} ~ ${newPosts.length} new posts`)
-        
-        //         newPosts.forEach(post => {
-        //             console.log(`# ${post.title}  ${post.id}`)
-        //         })
-        //     })
-        // });
-
-        // const { processStream } = this
-        // schedule.scheduleJob({rule: '*/1 * * * * *' }, async () => {
-        //     console.log("Started comment stream")
-        //     await processStream('wallstreetbets', 'comment', RedditSource.MAX_REDDIT_LIMIT);
         // });
     }
 }
