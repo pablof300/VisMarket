@@ -16,6 +16,7 @@
     "node-cron": "^3.0.0",
     "node-fetch": "^2.6.1",
     "node-schedule": "^2.0.0",
-    "ordered-dict": "^0.0.1"
+    "ordered-dict": "^0.0.1",
+    "pg": "^8.5.1"
   }
 }

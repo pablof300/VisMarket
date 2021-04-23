@@ -109,7 +109,17 @@ class RedditStreamerTunner {
         numberOfRequestsBySubreddit[data.subredditName][data.type] += data.records.length
         this.requestCounter += 1
         if (this.requestCounter === this.totalRequests) {
-            const overflowProtectionPercentage = 0.25
+            const overflowProtectionPercentage = 0.5
+            let copy={};
+            Object.assign(copy, numberOfRequestsBySubreddit);
+            Object.keys(copy).forEach(subredditName => {
+                const currentSubreddit = copy[subredditName]
+                currentSubreddit.post = currentSubreddit.post * (1 + overflowProtectionPercentage) / RedditApi.MAX_REQUEST_RECORDS_LIMIT
+                currentSubreddit.comment = currentSubreddit.comment * (1 + overflowProtectionPercentage) / RedditApi.MAX_REQUEST_RECORDS_LIMIT
+            })
+            console.log('copy!')
+            console.log(copy)
+
             Object.keys(numberOfRequestsBySubreddit).forEach(subredditName => {
                 const currentSubreddit = numberOfRequestsBySubreddit[subredditName]
                 currentSubreddit.post = Math.max(1, Math.ceil(currentSubreddit.post * (1 + overflowProtectionPercentage) / RedditApi.MAX_REQUEST_RECORDS_LIMIT))
